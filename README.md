@@ -46,7 +46,7 @@ The project is organized into feature branches for better development workflow:
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/your-username/pbl6-sandbox.git
+git clone https://github.com/XanakoneSPT/PBL6-SandBox.git
 cd pbl6-sandbox
 ```
 
@@ -61,7 +61,6 @@ git checkout webserver
 ### 3. System Requirements
 - **Python 3.8+**
 - **PostgreSQL** database
-- **Redis** for task queue
 - **VirtualBox** with configured VM
 - **Linux/Windows** host system
 
@@ -84,7 +83,7 @@ git checkout webserver
 
 1. **Clone and explore**
    ```bash
-   git clone https://github.com/your-username/pbl6-sandbox.git
+   git clone https://github.com/XanakoneSPT/PBL6-SandBox.git
    cd pbl6-sandbox
    git branch -a  # See all available branches
    ```
