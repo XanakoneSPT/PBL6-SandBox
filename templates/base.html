@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block title %}MalSandbox{% endblock %}</title>
+    {% load static %}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{% static 'css/base.css' %}">
+    <link rel="stylesheet" href="{% static 'css/app.css' %}">
+</head>
+<body>
+    <!-- Floating particles background -->
+    <div class="particles" id="particles"></div>
+
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <a href="{% url 'upload' %}" class="brand-link">
+                    <div class="brand-icon">Σ</div>
+                    <span class="brand-title">MalSandbox</span>
+                </a>
+            </div>
+            <div class="nav-menu">
+                <a href="#" class="nav-link">Upload</a>
+                <a href="#" class="nav-link">History</a>
+                <div class="nav-icons">
+                    <div class="nav-icon">
+                        <i class="fas fa-comment"></i>
+                    </div>
+                </div>
+                <a href="#" class="nav-link">Sign in</a>
+                <a href="#" class="nav-link nav-primary">Sign up</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <div class="container">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-disclaimer">
+                By submitting data above, you are agreeing to our <a href="#" class="footer-link">Terms of Service</a> and <a href="#" class="footer-link">Privacy Policy</a>, and to the sharing of your Sample submission with the security community. Please do not submit any personal information; MalSandbox is not responsible for the contents of your submission. <a href="#" class="footer-link">Learn more</a>.
+            </div>
+            <div class="footer-moreinfo">
+                Want to know more about the project? <a target="_blank" href="https://github.com/XanakoneSPT/PBL6-SandBox.git" class="footer-link">Check our GitHub</a>
+            </div>
+        </div>
+    </footer>
+
+    <script src="{% static 'js/base.js' %}"></script>
+</body>
+</html>

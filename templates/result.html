@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% block title %}MalSandbox - Analysis Result{% endblock %}
+{% block content %}
+{% load static %}
+<link rel="stylesheet" href="{% static 'css/result.css' %}">
+
+<div class="malSandbox-logo">
+    <div class="malSandbox-icon">Σ</div>
+    <h1 class="malSandbox-title">MalSandbox</h1>
+</div>
+
+<section class="card">
+    <header>
+        <h3>Analysis Result</h3>
+        <p>File: {{ file.original_name }}</p>
+    </header>
+    
+    <article id="result-container" data-file-id="{{ file.id }}">
+        <div class="progress-section">
+            <div class="progress-header">
+                <h4>Analysis Progress</h4>
+                <span id="progress-text">0%</span>
+            </div>
+            <progress id="bar" value="0" max="100"></progress>
+            <p id="status" class="status-indicator analyzing">
+                <span class="scanning-animation"></span>
+                Initializing analysis...
+            </p>
+        </div>
+
+        <div class="results-section" id="results-section" style="display: none;">
+            <h4>Analysis Results</h4>
+            <div class="results-tabs">
+                <button class="tab-btn active" data-tab="summary">Summary</button>
+                <button class="tab-btn" data-tab="details">Details</button>
+                <button class="tab-btn" data-tab="raw">Raw Output</button>
+            </div>
+            
+            <div class="tab-content">
+                <div id="summary-tab" class="tab-pane active">
+                    <div class="summary-grid" id="summary-grid">
+                        <!-- Summary cards will be populated by JavaScript -->
+                    </div>
+                </div>
+                
+                <div id="details-tab" class="tab-pane">
+                    <div class="details-content" id="details-content">
+                        <!-- Detailed analysis will be populated by JavaScript -->
+                    </div>
+                </div>
+                
+                <div id="raw-tab" class="tab-pane">
+                    <pre id="output"></pre>
+                </div>
+            </div>
+        </div>
+    </article>
+</section>
+
+<div class="action-buttons">
+    <a href="{% url 'upload' %}" class="btn btn-secondary">
+        <i class="fas fa-upload"></i>
+        Upload Another File
+    </a>
+    <button class="btn btn-primary" id="download-report" style="display: none;">
+        <i class="fas fa-download"></i>
+        Download Report
+    </button>
+</div>
+
+<script src="{% static 'js/result.js' %}"></script>
+{% endblock %}
