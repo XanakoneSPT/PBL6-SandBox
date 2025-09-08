@@ -176,7 +176,7 @@ Analysis Complete: ${new Date().toISOString()}`;
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `virustotal_report_${fileName}.txt`;
+        a.download = `Malsandbox_report_${fileName}.txt`;
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
