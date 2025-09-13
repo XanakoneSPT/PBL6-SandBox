@@ -133,6 +133,35 @@ class SandboxRunner:
         except subprocess.TimeoutExpired as e:
             raise VMControlError(f"vmrun timed out after {timeout or self.timeout}s") from e
 
+    def _run_vmrun_allow_exit_code(self, *args, timeout: Optional[int] = None) -> subprocess.CompletedProcess:
+        """
+        Execute a vmrun command that allows non-zero exit codes (for strace analysis).
+
+        Args:
+            *args: Arguments to pass to vmrun.
+            timeout: Operation timeout in seconds.
+
+        Returns:
+            subprocess.CompletedProcess: Command execution result.
+        """
+        cmd = ["vmrun", "-T", "ws", "-gu", self.guest_user, "-gp", self.guest_pass] + list(args)
+        self.logger.debug(f"Executing vmrun command (allow exit codes): {' '.join(cmd[:5] + ['<hidden>'] + cmd[6:])}")
+
+        try:
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=timeout or self.timeout,
+                check=False,  # Don't raise exception on non-zero exit code
+            )
+            self.logger.debug(f"STDOUT: {result.stdout.strip()}")
+            if result.stderr:
+                self.logger.debug(f"STDERR: {result.stderr.strip()}")
+            return result
+        except subprocess.TimeoutExpired as e:
+            raise VMControlError(f"vmrun timed out after {timeout or self.timeout}s") from e
+
     def start_vm(self, gui: bool = False) -> None:
         """Start the virtual machine."""
         self.logger.info("Starting virtual machine...")
@@ -285,11 +314,15 @@ class SandboxRunner:
                 cmd.extend([interpreter, file_path])
             cmd.extend(args)
 
-            self._run_vmrun("runProgramInGuest", str(self.vm_path), *cmd)
+            # Use a custom vmrun call that doesn't fail on non-zero exit codes
+            # since the target program may exit with non-zero (which is normal)
+            self._run_vmrun_allow_exit_code("runProgramInGuest", str(self.vm_path), *cmd)
             self.logger.info("Strace analysis completed.")
             return log_path
         except VMControlError as e:
-            raise ExecutionError(f"Strace analysis failed: {e}") from e
+            # Even if strace fails, we might still have some log data
+            self.logger.warning(f"Strace analysis encountered issues: {e}")
+            return log_path if log_path else None
 
     def run_custom_tracker(self, tracker_source: str, target_file: str, args: List[str] = None) -> None:
         """Run a custom tracker on a target file."""

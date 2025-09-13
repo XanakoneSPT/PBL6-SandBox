@@ -33,6 +33,7 @@
             <div class="results-tabs">
                 <button class="tab-btn active" data-tab="summary">Summary</button>
                 <button class="tab-btn" data-tab="details">Details</button>
+                <button class="tab-btn" data-tab="logs">VM Logs</button>
                 <button class="tab-btn" data-tab="raw">Raw Output</button>
             </div>
             
@@ -46,6 +47,38 @@
                 <div id="details-tab" class="tab-pane">
                     <div class="details-content" id="details-content">
                         <!-- Detailed analysis will be populated by JavaScript -->
+                    </div>
+                </div>
+                
+                <div id="logs-tab" class="tab-pane">
+                    <div class="logs-container">
+                        <div class="logs-header">
+                            <h5>VMware Analysis Logs</h5>
+                            <button class="btn btn-small" id="refresh-logs">
+                                <i class="fas fa-sync-alt"></i> Refresh
+                            </button>
+                        </div>
+                        <div class="logs-content" id="logs-content">
+                            <div class="log-entry">
+                                <span class="log-time">Loading logs...</span>
+                                <span class="log-message">Connecting to VMware analysis...</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="analysis-files-section">
+                        <div class="analysis-files-header">
+                            <h5>Analysis Files</h5>
+                            <button class="btn btn-small" id="refresh-files">
+                                <i class="fas fa-sync-alt"></i> Refresh
+                            </button>
+                        </div>
+                        <div class="analysis-files-content" id="analysis-files-content">
+                            <div class="file-entry">
+                                <span class="file-time">Loading files...</span>
+                                <span class="file-message">Checking for analysis files...</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 

@@ -13,7 +13,7 @@ vm_dir = Path(__file__).parent.parent / 'VM'
 sys.path.insert(0, str(vm_dir))
 
 try:
-    from SandboxRunner import SandboxRunner
+    from VM.SandboxRunner import SandboxRunner
 except ImportError as e:
     logging.error(f"Failed to import SandboxRunner: {e}")
     SandboxRunner = None
