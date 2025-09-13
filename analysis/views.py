@@ -154,39 +154,59 @@ def _analyze_file(uploaded_file_id: int) -> None:
         if not interpreter:
             raise Exception(f"Unsupported file type: {ext}")
         
-        # Run strace analysis for system call monitoring (optional)
+        # Check if it's a document file (non-executable)
+        is_document = ext in ['.pdf', '.doc', '.docx', '.txt', '.rtf']
+        
+        # Run appropriate analysis based on file type
         strace_log = None
         strace_result = "Strace analysis skipped"
-        try:
-            _update_progress(uploaded_file_id, 60, "Running system call analysis...")
-            log_file = f"analysis_log_{uploaded_file_id}.txt"
-            strace_log = vm.analyze_with_strace(vm_file_path, log_file)
-            strace_result = "Strace analysis completed successfully"
-        except Exception as e:
-            logger.warning(f"Strace analysis failed for file {uploaded_file_id}: {e}")
-            strace_result = f"Strace analysis failed: {str(e)}"
-        
-        # Execute the file if it's executable
         execution_result = "File type does not support direct execution."
-        if ext in ['.py', '.js', '.sh', '.rb', '.pl', '.php']:
-            _update_progress(uploaded_file_id, 80, "Executing file in sandbox...")
+        document_log = None
+        document_result = "Document analysis skipped"
+        
+        if is_document:
+            # Document analysis for PDFs and other documents
             try:
-                vm.execute_code(vm_file_path)
-                execution_result = "File executed successfully in sandbox."
+                _update_progress(uploaded_file_id, 60, "Running document analysis...")
+                log_file = f"document_analysis_{uploaded_file_id}.txt"
+                document_log = vm.analyze_document(vm_file_path, log_file)
+                document_result = "Document analysis completed successfully"
             except Exception as e:
-                execution_result = f"File execution failed: {str(e)}"
-                logger.warning(f"File execution failed for {uploaded_file_id}: {e}")
+                logger.warning(f"Document analysis failed for file {uploaded_file_id}: {e}")
+                document_result = f"Document analysis failed: {str(e)}"
+        else:
+            # Code analysis for executable files
+            # Run strace analysis for system call monitoring (optional)
+            try:
+                _update_progress(uploaded_file_id, 60, "Running system call analysis...")
+                log_file = f"analysis_log_{uploaded_file_id}.txt"
+                strace_log = vm.analyze_with_strace(vm_file_path, log_file)
+                strace_result = "Strace analysis completed successfully"
+            except Exception as e:
+                logger.warning(f"Strace analysis failed for file {uploaded_file_id}: {e}")
+                strace_result = f"Strace analysis failed: {str(e)}"
+            
+            # Execute the file if it's executable
+            if ext in ['.py', '.js', '.sh', '.rb', '.pl', '.php']:
+                _update_progress(uploaded_file_id, 80, "Executing file in sandbox...")
+                try:
+                    vm.execute_code(vm_file_path)
+                    execution_result = "File executed successfully in sandbox."
+                except Exception as e:
+                    execution_result = f"File execution failed: {str(e)}"
+                    logger.warning(f"File execution failed for {uploaded_file_id}: {e}")
         
         # Copy analysis results back
         _update_progress(uploaded_file_id, 90, "Retrieving analysis results...")
         
-        # Get the strace log if it was created
+        # Get the analysis logs if they were created
         analysis_output = f"File Analysis Results:\n"
         analysis_output += f"File Type: {ext}\n"
         analysis_output += f"Interpreter: {interpreter}\n"
         analysis_output += f"Needs Compilation: {needs_compilation}\n"
         analysis_output += f"Execution Result: {execution_result}\n"
         analysis_output += f"Strace Analysis: {strace_result}\n"
+        analysis_output += f"Document Analysis: {document_result}\n"
         
         # Copy analysis files from VM to shared folder
         analysis_files = []
@@ -201,6 +221,17 @@ def _analyze_file(uploaded_file_id: int) -> None:
             except Exception as e:
                 logger.warning(f"Failed to copy strace log: {e}")
                 analysis_output += f"\nSystem call log generation failed: {str(e)}\n"
+        
+        if document_log:
+            # Copy the document analysis log file to shared folder
+            log_dest = settings.SHARED_FOLDERS['FROM_VM'] / f"document_analysis_{uploaded_file_id}.txt"
+            try:
+                vm.get_log_file(document_log, str(log_dest))
+                analysis_files.append(str(log_dest))
+                analysis_output += f"\nDocument analysis log saved to: {log_dest}\n"
+            except Exception as e:
+                logger.warning(f"Failed to copy document analysis log: {e}")
+                analysis_output += f"\nDocument analysis log generation failed: {str(e)}\n"
         
         # Copy any other analysis files that might have been generated
         try:

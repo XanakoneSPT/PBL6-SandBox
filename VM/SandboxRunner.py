@@ -45,6 +45,15 @@ class SandboxRunner:
         ".go": "go",
     }
 
+    # Document file types that can be analyzed but not executed
+    _DOCUMENT_TYPES = {
+        ".pdf": "pdf",
+        ".doc": "doc",
+        ".docx": "docx",
+        ".txt": "txt",
+        ".rtf": "rtf",
+    }
+
     def __init__(
         self,
         vm_path: str = "E:\\Downloads\\kali-linux-2025.2-vmware-amd64.vmwarevm\\kali-linux-2025.2-vmware-amd64.vmx",
@@ -235,11 +244,14 @@ class SandboxRunner:
     def detect_language(self, file_path: str) -> Tuple[Optional[str], str, bool]:
         """Detect programming language and execution requirements."""
         ext = Path(file_path).suffix.lower()
-        return (
-            self._INTERPRETERS.get(ext) or self._COMPILERS.get(ext),
-            ext,
-            ext in self._COMPILERS,
-        )
+        
+        # Check if it's a document type (non-executable)
+        if ext in self._DOCUMENT_TYPES:
+            return (self._DOCUMENT_TYPES[ext], ext, False)
+        
+        # Check if it's an executable file type
+        interpreter = self._INTERPRETERS.get(ext) or self._COMPILERS.get(ext)
+        return (interpreter, ext, ext in self._COMPILERS)
 
     def compile_code(self, source_path: str) -> str:
         """Compile source code in the guest VM."""
@@ -357,6 +369,113 @@ class SandboxRunner:
             return
         self.copy_from_vm(log_file, dest)
         self.logger.info(f"Log file copied to: {dest}")
+
+    def analyze_document(self, file_path: str, log_file: str = "document_analysis.txt") -> str:
+        """Analyze document files (PDF, DOC, etc.) for metadata and content."""
+        interpreter, ext, _ = self.detect_language(file_path)
+        if not interpreter or ext not in self._DOCUMENT_TYPES:
+            raise ExecutionError(f"Document analysis not supported for file type: {ext}")
+        
+        log_path = str(self.base_dir / log_file)
+        file_path = str(self.base_dir / file_path)
+        self.ensure_guest_directory(str(self.base_dir))
+        
+        self.logger.info(f"Analyzing document {file_path}, logging to {log_path}")
+        
+        try:
+            # Create analysis script based on file type
+            if ext == ".pdf":
+                analysis_script = f"""
+#!/bin/bash
+echo "=== PDF Document Analysis ===" > {log_path}
+echo "File: {file_path}" >> {log_path}
+echo "Analysis Time: $(date)" >> {log_path}
+echo "" >> {log_path}
+
+# Check if file exists
+if [ ! -f "{file_path}" ]; then
+    echo "ERROR: File not found" >> {log_path}
+    exit 1
+fi
+
+# Basic file information
+echo "=== File Information ===" >> {log_path}
+ls -la "{file_path}" >> {log_path}
+file "{file_path}" >> {log_path}
+echo "" >> {log_path}
+
+# Try to extract PDF metadata if pdfinfo is available
+if command -v pdfinfo >/dev/null 2>&1; then
+    echo "=== PDF Metadata ===" >> {log_path}
+    pdfinfo "{file_path}" >> {log_path} 2>&1
+    echo "" >> {log_path}
+fi
+
+# Try to extract text content if pdftotext is available
+if command -v pdftotext >/dev/null 2>&1; then
+    echo "=== PDF Text Content (first 1000 chars) ===" >> {log_path}
+    pdftotext "{file_path}" - | head -c 1000 >> {log_path} 2>&1
+    echo "" >> {log_path}
+fi
+
+# Check for embedded objects or scripts
+if command -v pdfdetach >/dev/null 2>&1; then
+    echo "=== PDF Attachments ===" >> {log_path}
+    pdfdetach -list "{file_path}" >> {log_path} 2>&1
+    echo "" >> {log_path}
+fi
+
+# Security analysis if qpdf is available
+if command -v qpdf >/dev/null 2>&1; then
+    echo "=== PDF Security Analysis ===" >> {log_path}
+    qpdf --show-encryption "{file_path}" >> {log_path} 2>&1
+    echo "" >> {log_path}
+fi
+
+echo "=== Analysis Complete ===" >> {log_path}
+"""
+            else:
+                # Generic document analysis for other types
+                analysis_script = f"""
+#!/bin/bash
+echo "=== Document Analysis ===" >> {log_path}
+echo "File: {file_path}" >> {log_path}
+echo "Type: {ext}" >> {log_path}
+echo "Analysis Time: $(date)" >> {log_path}
+echo "" >> {log_path}
+
+# Check if file exists
+if [ ! -f "{file_path}" ]; then
+    echo "ERROR: File not found" >> {log_path}
+    exit 1
+fi
+
+# Basic file information
+echo "=== File Information ===" >> {log_path}
+ls -la "{file_path}" >> {log_path}
+file "{file_path}" >> {log_path}
+echo "" >> {log_path}
+
+# Try to extract text content
+echo "=== Text Content (first 1000 chars) ===" >> {log_path}
+head -c 1000 "{file_path}" >> {log_path} 2>&1
+echo "" >> {log_path}
+
+echo "=== Analysis Complete ===" >> {log_path}
+"""
+            
+            # Write and execute the analysis script
+            script_path = str(self.base_dir / "analyze_document.sh")
+            self._run_vmrun("runProgramInGuest", str(self.vm_path), "/bin/bash", "-c", f"cat > {script_path} << 'EOF'\n{analysis_script}\nEOF")
+            self._run_vmrun("runProgramInGuest", str(self.vm_path), "chmod", "+x", script_path)
+            self._run_vmrun("runProgramInGuest", str(self.vm_path), "/bin/bash", script_path)
+            
+            self.logger.info("Document analysis completed.")
+            return log_path
+            
+        except VMControlError as e:
+            self.logger.warning(f"Document analysis encountered issues: {e}")
+            return log_path if log_path else None
 
     def cleanup(self) -> None:
         """Clean up the sandbox environment."""
