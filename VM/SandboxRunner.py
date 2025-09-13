@@ -47,7 +47,7 @@ class SandboxRunner:
 
     def __init__(
         self,
-        vm_path: str = "E:\\package\\VMWare os\\kali-linux-2025.2-vmware-amd64.vmwarevm\\kali-linux-2025.2-vmware-amd64.vmx",
+        vm_path: str = "E:\\Downloads\\kali-linux-2025.2-vmware-amd64.vmwarevm\\kali-linux-2025.2-vmware-amd64.vmx",
         guest_user: str = "kali",
         guest_pass: str = "kali",
         base_snapshot: str = "CleanSnapshot1",

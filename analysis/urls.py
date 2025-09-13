@@ -6,6 +6,7 @@ urlpatterns = [
     path('upload/', views.upload, name='upload'),
     path('result/<int:file_id>/', views.result_page, name='result'),
     path('api/progress/<int:file_id>/', views.progress_api, name='progress_api'),
+    path('api/vm-status/', views.vm_status_api, name='vm_status_api'),
 ]
 
 
