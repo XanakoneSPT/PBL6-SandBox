@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VM Live Stream - Sandbox</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a1a;
+            color: #fff;
+        }
+
+        .error-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+        }
+
+        .error-box {
+            background: #2a2a2a;
+            border: 2px solid #e74c3c;
+            border-radius: 10px;
+            padding: 30px;
+            max-width: 600px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .error-icon {
+            font-size: 60px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .error-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #e74c3c;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .error-message {
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 15px;
+            color: #ccc;
+        }
+
+        .error-detail {
+            background: #1a1a1a;
+            border-left: 4px solid #3498db;
+            padding: 15px;
+            border-radius: 5px;
+            font-size: 14px;
+            white-space: pre-line;
+            color: #aaa;
+        }
+
+        .btn-retry {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 12px 30px;
+            background: #3498db;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background 0.3s;
+            text-align: center;
+        }
+
+        .btn-retry:hover {
+            background: #2980b9;
+        }
+
+        iframe {
+            width: 100vw;
+            height: 100vh;
+            border: none;
+        }
+
+        .loading-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: #1a1a1a;
+        }
+
+        .spinner {
+            border: 4px solid #2a2a2a;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .loading-text {
+            font-size: 18px;
+            color: #ccc;
+        }
+
+        .upload-box {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 320px;
+            background: #222;
+            border-radius: 12px;
+            box-shadow: 0 5px 25px rgba(0,0,0,0.5);
+            overflow: hidden;
+            z-index: 9999;
+            font-size: 14px;
+        }
+
+        .upload-header {
+            background: #3498db;
+            color: white;
+            padding: 10px 15px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .upload-body {
+            padding: 15px;
+            background: #2b2b2b;
+        }
+
+        .file-label {
+            display: block;
+            background: #3b3b3b;
+            color: #ddd;
+            border: 1px dashed #555;
+            border-radius: 6px;
+            text-align: center;
+            padding: 10px;
+            cursor: pointer;
+            margin-bottom: 10px;
+            transition: background 0.2s;
+        }
+
+        .file-label:hover {
+            background: #444;
+        }
+
+        .file-label.dragover {
+            background: #555;
+        }
+
+        .btn-upload {
+            width: 100%;
+            padding: 10px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .btn-upload:hover {
+            background: #2980b9;
+        }
+
+        #file-list {
+            list-style: none;
+            margin-top: 10px;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        #file-list li {
+            background: #1f1f1f;
+            padding: 5px 10px;
+            margin-bottom: 5px;
+            border-radius: 5px;
+        }
+
+        .toggle-btn {
+            background: transparent;
+            border: none;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+        }
+
+        .progress-container {
+            margin-top: 10px;
+            text-align: center;
+        }
+
+        progress {
+            width: 100%;
+            height: 20px;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    {% if error %}
+    <div class="error-container">
+        <div class="error-box">
+            <div class="error-icon">⚠️</div>
+            <h1 class="error-title">Lỗi khởi động Sandbox</h1>
+            <p class="error-message">{{ error_message }}</p>
+            {% if error_detail %}
+            <div class="error-detail">{{ error_detail }}</div>
+            {% endif %}
+            <a href="/stream/" class="btn-retry">🔄 Thử lại</a>
+        </div>
+    </div>
+    {% else %}
+    <div class="loading-container" id="loading">
+        <div class="spinner"></div>
+        <p class="loading-text">Đang kết nối đến máy ảo...</p>
+    </div>
+    <iframe id="vnc-frame"
+        src="/static/noVNC/vnc.html?autoconnect=true&host={{ vnc_ip }}&port={{ vnc_port }}&password={{ vnc_password }}"
+        allowfullscreen style="display: none;"
+        onload="document.getElementById('loading').style.display='none'; this.style.display='block';"></iframe>
+    {% endif %}
+
+    <div id="upload-box" class="upload-box">
+        <div class="upload-header" onclick="toggleUploadBox()">
+            <span>📁 Upload File vào Sandbox</span>
+            <button class="toggle-btn" id="toggle-btn">−</button>
+        </div>
+        <div class="upload-body" id="upload-body">
+            <form id="upload-form" enctype="multipart/form-data">
+                <div class="file-label" ondrop="handleDrop(event, 'file-input-files')" ondragover="event.preventDefault();">
+                    <input type="file" id="file-input-files" name="file" multiple>
+                    Chọn file
+                </div>
+                <div class="file-label" ondrop="handleDrop(event, 'file-input-folder')" ondragover="event.preventDefault();">
+                    <input type="file" id="file-input-folder" name="file" multiple webkitdirectory>
+                    Chọn thư mục
+                </div>
+                <button type="submit" class="btn-upload">⬆️ Tải lên</button>
+                <div class="progress-container" style="display: none;">
+                    <progress id="upload-progress" value="0" max="100"></progress>
+                    <span id="progress-text">0%</span>
+                </div>
+            </form>
+            <ul id="file-list"></ul>
+        </div>
+    </div>
+
+    <script>
+        // Kiểm tra hỗ trợ webkitdirectory
+        function checkWebkitDirectorySupport() {
+            const input = document.createElement('input');
+            return 'webkitdirectory' in input;
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!checkWebkitDirectorySupport()) {
+                const folderLabel = document.querySelector('.file-label[ondrop*="file-input-folder"]');
+                folderLabel.style.display = 'none';
+                alert('Trình duyệt không hỗ trợ tải thư mục.');
+            }
+        });
+
+        // Toggle upload box
+        function toggleUploadBox() {
+            const body = document.getElementById("upload-body");
+            const btn = document.getElementById("toggle-btn");
+            if (body.style.display === "none") {
+                body.style.display = "block";
+                btn.textContent = "−";
+            } else {
+                body.style.display = "none";
+                btn.textContent = "+";
+            }
+        }
+
+        // Kéo thả file
+        function handleDrop(event, inputId) {
+            event.preventDefault();
+            const label = event.target.closest('.file-label');
+            label.classList.remove('dragover');
+            const files = event.dataTransfer.files;
+            const dt = new DataTransfer();
+            for (let i = 0; i < files.length; i++) {
+                dt.items.add(files[i]);
+            }
+            document.getElementById(inputId).files = dt.files;
+            document.getElementById('upload-form').dispatchEvent(new Event('submit'));
+        }
+
+        const fileLabels = document.querySelectorAll('.file-label');
+        fileLabels.forEach(label => {
+            label.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                label.classList.add('dragover');
+            });
+            label.addEventListener('dragleave', (e) => {
+                label.classList.remove('dragover');
+            });
+        });
+
+        // Xử lý upload
+        const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
+        const ALLOWED_TYPES = ['text/plain', 'image/png', 'image/jpeg', 'application/pdf'];
+
+        document.getElementById("upload-form").addEventListener("submit", function (e) {
+            e.preventDefault();
+            const fileInputFiles = document.getElementById("file-input-files").files;
+            const fileInputFolder = document.getElementById("file-input-folder").files;
+            const files = [...fileInputFiles, ...fileInputFolder];
+
+            if (files.length === 0) return alert("Chưa chọn file hoặc thư mục!");
+
+            // Kiểm tra kích thước và loại file
+            for (const file of files) {
+                if (file.size > MAX_FILE_SIZE) {
+                    alert(`File ${file.name} quá lớn! Giới hạn là ${MAX_FILE_SIZE / (1024 * 1024)}MB.`);
+                    return;
+                }
+                if (!ALLOWED_TYPES.includes(file.type) && file.type !== '') {
+                    alert(`File ${file.name} không được hỗ trợ!`);
+                    return;
+                }
+            }
+
+            const progressContainer = document.querySelector('.progress-container');
+            const progressBar = document.getElementById('upload-progress');
+            const progressText = document.getElementById('progress-text');
+            progressContainer.style.display = 'block';
+            progressBar.value = 0;
+            progressText.textContent = '0%';
+
+            const formData = new FormData();
+            for (const file of files) {
+                formData.append("files", file, file.webkitRelativePath || file.name);
+            }
+
+            const xhr = new XMLHttpRequest();
+            xhr.open("POST", "/upload_file/", true);
+
+            xhr.upload.onprogress = function (event) {
+                if (event.lengthComputable) {
+                    const percentComplete = (event.loaded / event.total) * 100;
+                    progressBar.value = percentComplete;
+                    progressText.textContent = `${Math.round(percentComplete)}%`;
+                }
+            };
+
+            xhr.onerror = function () {
+                progressContainer.style.display = 'none';
+                alert("❌ Lỗi kết nối đến server. Vui lòng kiểm tra lại.");
+            };
+
+            xhr.onload = function () {
+                progressContainer.style.display = 'none';
+                try {
+                    const data = JSON.parse(xhr.responseText);
+                    const list = document.getElementById("file-list");
+                    list.innerHTML = "";
+                    if (data.status === "success") {
+                        data.files.forEach(name => {
+                            const li = document.createElement("li");
+                            li.textContent = `📦 ${name}`;
+                            list.appendChild(li);
+                        });
+                    } else {
+                        alert("❌ Lỗi upload: " + (data.message || 'Không xác định'));
+                    }
+                } catch (err) {
+                    alert("❌ Lỗi xử lý phản hồi từ server.");
+                }
+            };
+
+            xhr.send(formData);
+        });
+    </script>
+</body>
+
+</html>
