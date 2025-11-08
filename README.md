@@ -71,7 +71,7 @@ git checkout webserver
 | Branch | Purpose | Status | Documentation |
 |--------|---------|--------|---------------|
 | [`main`](../../tree/main) | Repository entry point | ✅ Active | This README |
-| [`webserver`](../../tree/webserver) | Django web application | 🚧 Development | [Webserver README](../../tree/webserver#readme) |
+| [`webserver`](../../tree/rebuild/webserver-v2) | Django web application | 🚧 Development | [Webserver README](../../tree/rebuild/webserver-v2#readme) |
 | `vm-agent` | VM analysis scripts | 📅 Planned | Coming Soon |
 | `api` | REST API endpoints | 📅 Planned | Coming Soon |
 
