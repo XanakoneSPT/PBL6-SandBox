@@ -147,7 +147,8 @@ def generate_pdf(file_info, progress_data):
     # Interpreter
     ################
     interpreter = progress_data.get('interpreter', 'Unknown')
-    content.append(Paragraph(f"<b>Interpreter:</b> {interpreter}", styles['Normal']))
+    content.append(Paragraph("Interpreter", heading3_style))
+    content.append(Paragraph(f"<b>Type:</b> {interpreter}", styles['Normal']))
     
     ######################
     # Pattern detection
