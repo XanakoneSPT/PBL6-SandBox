@@ -5,6 +5,50 @@ from reportlab.lib.units import inch
 from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak, Table, TableStyle
 
+def sanitize_error(error_message):
+    if not error_message:
+        return 'Unknown error occurred'
+    
+    error = str(error_message).lower()
+    
+    # File type/format errors
+    if any(keyword in error for keyword in ['not supported', 'không phải định dạng', 
+                                             'file type', 'format', 'định dạng']):
+        return 'File type not supported'
+    
+    # File path/access errors
+    if any(keyword in error for keyword in ['could not open', 'cannot open', 
+                                            'path', 'file not found',
+                                            'permission denied', 'access denied',
+                                            'lỗi khi quét']):
+        return 'Unable to access file. File may be corrupted or in an unsupported format.'
+    
+    # Hash-related errors
+    if any(keyword in error for keyword in ['no hash', 'hash']):
+        return 'Unable to calculate file hash'
+    
+    # API/network errors
+    if any(keyword in error for keyword in ['api', 'network', 
+                                            'connection', 'timeout']):
+        return 'External service unavailable. Please try again later.'
+    
+    # VM/sandbox errors
+    if any(keyword in error for keyword in ['vm', 'sandbox', 
+                                            'virtual machine']):
+        return 'Analysis environment error. Please try again.'
+    
+    # LSTM/model errors
+    if any(keyword in error for keyword in ['lstm', 'model', 
+                                            'neural', 'prediction']):
+        return 'Behavioral analysis failed. Insufficient data for analysis.'
+    
+    # Database errors
+    if any(keyword in error for keyword in ['database', 'db']):
+        return 'Database query failed'
+    
+    # Generic fallback - don't show the actual error
+    return 'An error occurred during analysis. Please try again or contact support if the issue persists.'
+
 def generate_pdf(file_info, progress_data):
     buffer = BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4)
@@ -124,7 +168,7 @@ def generate_pdf(file_info, progress_data):
     if not yara_complete:
         status = "Not Scanned"
     elif yara_error:
-        status = f"Error: {yara_error}"
+        status = f"Error: {sanitize_error(yara_error)}"
     elif yara_count == 0:
         status = "Clean - No threats"
     else:
@@ -151,7 +195,7 @@ def generate_pdf(file_info, progress_data):
     if not bazaar_complete:
         status = "Not Scanned"
     elif bazaar_error:
-        status = f"API Error: {bazaar_error}"
+        status = f"API Error: {sanitize_error(bazaar_error)}"
     elif not bazaar_success:
         status = "API Error"
     elif is_malicious:
@@ -243,7 +287,7 @@ def generate_pdf(file_info, progress_data):
         if lstm_windows is not None:
             lstm_data.append(['Windows Analyzed', str(lstm_windows)])
         if lstm_error:
-            lstm_data.append(['Error', lstm_error])
+            lstm_data.append(['Error', sanitize_error(lstm_error)])
     else:
         lstm_data.append(['Status', 'Not Analyzed'])
 
@@ -276,7 +320,7 @@ def generate_pdf(file_info, progress_data):
         bazaar_data.append(['Status', 'Not Scanned'])
     elif bazaar_error:
         bazaar_data.append(['Status', 'API Error'])
-        bazaar_data.append(['Error', bazaar_error])
+        bazaar_data.append(['Error', sanitize_error(bazaar_error)])
     elif not bazaar_success:
         bazaar_data.append(['Status', 'API Error'])
     elif is_malicious:
@@ -327,7 +371,7 @@ def generate_pdf(file_info, progress_data):
         yara_status_data.append(['Status', 'Not Scanned'])
     elif yara_error:
         yara_status_data.append(['Status', 'Error'])
-        yara_status_data.append(['Error', yara_error])
+        yara_status_data.append(['Error', sanitize_error(yara_error)])
     elif yara_count == 0:
         yara_status_data.append(['Status', 'Clean - No threats detected'])
         yara_status_data.append(['Total Matches', '0'])
