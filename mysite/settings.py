@@ -153,3 +153,6 @@ os.makedirs(SHARED_FOLDERS['FROM_VM'], exist_ok=True)
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
+
+# Session settings
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True  # Session expires when browser closes
