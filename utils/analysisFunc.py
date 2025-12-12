@@ -1,0 +1,285 @@
+from hashlib import sha256
+from ntpath import isdir, isfile
+import os
+import shutil
+import logging
+from pathlib import Path
+
+from django.conf import settings
+from django.db import transaction
+
+from analysis.models import UploadedFile, AnalysisResult
+from utils.progress import _update_progress
+from utils.Bazaar_helper.checker_bazaar import check_hash
+from utils.lstm_detection.anormaly_predictor import AnomalyDetector
+
+def _run_yara_scan(file_path: str) -> dict:
+
+    logger = logging.getLogger(__name__)
+    result = {
+        'filtered_matches': [],
+        'raw_matches': [],
+        'error': None
+    }
+
+    try:
+        from utils.YARA_helper.YARAScanner import YARAScanner
+        scanner = YARAScanner(auto_filter=True)
+        
+        filtered_matches = scanner.scan_file(file_path, filter_results=True)
+        raw_matches = scanner.scan_file(file_path, filter_results=False)
+
+        #Convert to dictionaries
+        result['filtered_matches'] = [
+            {
+                'rule': m.rule, 
+                'description': m.meta.get('description', 'No description') if m.meta else 'No description'
+            } for m in filtered_matches
+        ]
+        result['raw_matches'] = [
+            {
+                'rule': m.rule,
+                'description': m.meta.get('description', 'No description') if m.meta else 'No description'
+            } for m in raw_matches]
+        
+    except Exception as e:
+        result['error'] = str(e)
+        logger.error(f"YARA scan failed: {e}")
+
+    return result
+
+def _run_bazaar_scan(sha256_hash: str) -> dict:
+
+    logger = logging.getLogger(__name__)
+    result = {
+        'success': False,
+        'is_malicious': False,
+        'malware_info': None,
+        'error': None
+    }
+
+    try:
+        bazaar_result = check_hash(sha256_hash, "sha256")
+
+        result['success'] = bazaar_result['success']
+        result['is_malicious'] = bazaar_result['is_malicious']
+        result['malware_info'] = bazaar_result['malware_info']
+        result['error'] = bazaar_result.get('error')
+
+    except Exception as e:
+        result['error'] = str(e)
+        logger.error(f"Bazaar scan failed: {e}")
+
+    return result
+
+def _run_lstm_scan(log_path: str) -> dict:
+    logger = logging.getLogger(__name__)
+        
+    lstm_base = settings.BASE_DIR / "utils" / "lstm_detection"
+    model_path = lstm_base / "model" / "lstm_adfa_model.keras"
+    syscall_map_path = lstm_base / "lib" / "linux_syscalls_x86_64_parsed.json"
+
+    result = {
+        'final_decision': None,
+        'max_prob_anomaly': None,
+        'mean_prob_anomaly': None,
+        'num_windows': None,
+        'error': None
+    }
+
+    try:
+        detector = AnomalyDetector(
+            model_path= str(model_path),
+            syscall_map_path= str(syscall_map_path)
+        )
+
+        lstm_result = detector.predict_from_log(log_path)
+
+        result['final_decision'] = lstm_result['final_decision']
+        result['max_prob_anomaly'] = lstm_result['max_prob_anomaly']
+        result['mean_prob_anomaly'] = lstm_result['mean_prob_anomaly']
+        result['num_windows'] = lstm_result['num_windows']
+    except Exception as e:
+        result['error'] = str(e)
+        logger.error(f"LSTM failed: {e}")
+
+    return result
+
+def _analyze_file(uploaded_file_id: int) -> None:
+    logger = logging.getLogger(__name__)
+    
+    # Get uploaded file from database
+    try:
+        uf = UploadedFile.objects.get(id=uploaded_file_id)
+    except UploadedFile.DoesNotExist:
+        logger.error(f"UploadedFile not found: id={uploaded_file_id}")
+        return
+    except Exception as e:
+        logger.error(f"Failed to get file: {e}")
+        return
+
+    analysis_result, created = AnalysisResult.objects.get_or_create(
+        uploaded_file=uf,
+        defaults={'status': 'pending'}
+    )
+    
+    _update_progress(uploaded_file_id, 5, "processing")
+    
+    # Get file path on Django server
+    try:
+        host_file_path = uf.file.path
+    except Exception as e:
+        logger.error(f"Failed to get file path: {e}")
+        return
+    _update_progress(uploaded_file_id, 10)
+    
+    # YARA scan
+    try:
+        yara_results = _run_yara_scan(host_file_path)
+        # Save ALL YARA fields to database
+        analysis_result.yara_filtered_matches = yara_results.get('filtered_matches', [])
+        analysis_result.yara_raw_matches = yara_results.get('raw_matches', [])
+        analysis_result.yara_error = yara_results.get('error')
+        analysis_result.save()  # Save all at once
+        
+        # Debug print
+        print("\n" + "="*50)
+        print("YARA SCAN RESULTS:")
+        print("="*50)
+        print(f"Filtered matches: {len(yara_results.get('filtered_matches', []))}")
+        print(f"Raw matches: {len(yara_results.get('raw_matches', []))}")
+        if yara_results.get('raw_matches'):
+            print("Raw match rules:", [m.get('rule') for m in yara_results.get('raw_matches', [])])
+        if yara_results.get('error'):
+            print(f"Error: {yara_results.get('error')}")
+        print("="*50 + "\n")
+    except Exception as e:
+        logger.error(f"YARA scan failed: {e}")
+        # Save error to database instead of JSON
+        analysis_result.yara_error = str(e)
+        analysis_result.save()
+        print(f"\n[YARA ERROR] {e}\n")
+    _update_progress(uploaded_file_id, 20)
+    
+    # Bazaar scan
+    try:
+        if uf.sha256_hash:
+            bazaar_results = _run_bazaar_scan(uf.sha256_hash)
+            analysis_result.bazaar_success = bazaar_results.get('success', False)
+            analysis_result.bazaar_is_malicious = bazaar_results.get('is_malicious', False)
+            # Handle None explicitly
+            malware_info = bazaar_results.get('malware_info')
+            analysis_result.bazaar_malware_info = malware_info if malware_info is not None else {}
+            analysis_result.bazaar_error = bazaar_results.get('error')
+            analysis_result.save()
+            # Debug print
+            print("\n" + "="*50)
+            print("BAZAAR SCAN RESULTS:")
+            print("="*50)
+            print(f"Success: {bazaar_results.get('success', False)}")
+            print(f"Is Malicious: {bazaar_results.get('is_malicious', False)}")
+            if bazaar_results.get('malware_info'):
+                print(f"Malware Info: {bazaar_results.get('malware_info')}")
+            if bazaar_results.get('error'):
+                print(f"Error: {bazaar_results.get('error')}")
+            print("="*50 + "\n")
+        else:
+            analysis_result.bazaar_error = 'No hash'
+            analysis_result.save()
+            print("\n[BAZAAR] No SHA256 hash available\n")
+    except Exception as e:
+        logger.error(f"Bazaar scan failed: {e}")
+        analysis_result.bazaar_error = str(e)
+        analysis_result.save()
+        print(f"\n[BAZAAR ERROR] {e}\n")
+    _update_progress(uploaded_file_id, 40)
+    
+    # Create SandboxRunner instance
+    try:
+        from utils.VM.SandboxRunner import SandboxRunner
+        VMrunner = SandboxRunner()
+    except Exception as e:
+        logger.error(f"Failed to create SandboxRunner: {e}")
+        analysis_result.status = 'error'
+        analysis_result.save()
+        _update_progress(uploaded_file_id, 100, "error")
+        return
+    
+    # Copy file to VM and run analysis
+    try:
+        guest_full_path = VMrunner.copy_to_vm(host_file_path)
+        guest_filename = Path(guest_full_path).name
+        interpreter, ext, _ = VMrunner.detect_language(guest_full_path)
+        analysis_result.interpreter = interpreter if interpreter else None
+        analysis_result.save()
+        # ext = Path(host_file_path).suffix.lower()
+        
+        # Run VM analysis
+        try:
+            if ext in (".pdf", ".doc", ".docx", ".txt", ".rtf"):
+                log_path_in_vm = VMrunner.analyze_document(guest_filename, log_file="document_analysis.txt")
+            else:
+                log_path_in_vm = VMrunner.analyze_with_strace(guest_filename, log_file="syscall_log.txt")
+        except Exception as e:
+            logger.error(f"VM analysis failed: {e}")
+            log_path_in_vm = None
+        
+        # Copy log file back from VM
+        if log_path_in_vm:
+            dest_dir = settings.SHARED_FOLDERS["FROM_VM"]
+            dest_dir.mkdir(parents=True, exist_ok=True)
+            dest_path = dest_dir / f"{uf.id}_{Path(host_file_path).stem}_analysis.log"
+            
+            try:
+                VMrunner.get_log_file(log_path_in_vm, str(dest_path))
+                if dest_path and dest_path.exists():
+                    analysis_result.vm_log_file_path = dest_path.name
+                    analysis_result.save()
+            except Exception as e:
+                logger.error(f"Failed to copy log file from VM: {e}")
+                dest_path = None
+            
+            # Run LSTM detection (only for strace logs)
+            if dest_path and dest_path.exists() and ext not in (".pdf", ".doc", ".docx", ".txt", ".rtf"):
+                try:
+                    lstm_results = _run_lstm_scan(str(dest_path))
+                    analysis_result.lstm_final_decision = lstm_results.get('final_decision')
+                    analysis_result.lstm_max_prob_anomaly = lstm_results.get('max_prob_anomaly')
+                    analysis_result.lstm_mean_prob_anomaly = lstm_results.get('mean_prob_anomaly')
+                    analysis_result.lstm_num_windows = lstm_results.get('num_windows')
+                    analysis_result.lstm_error = lstm_results.get('error')
+                    analysis_result.save()
+                    # Debug print
+                    print("\n" + "="*50)
+                    print("LSTM DETECTION RESULTS:")
+                    print("="*50)
+                    print(f"Final Decision: {lstm_results.get('final_decision')}")
+                    print(f"Max Probability Anomaly: {lstm_results.get('max_prob_anomaly')}")
+                    print(f"Mean Probability Anomaly: {lstm_results.get('mean_prob_anomaly')}")
+                    print(f"Number of Windows: {lstm_results.get('num_windows')}")
+                    if lstm_results.get('error'):
+                        print(f"Error: {lstm_results.get('error')}")
+                    print("="*50 + "\n")
+                    _update_progress(uploaded_file_id, 90)
+                except Exception as e:
+                    logger.error(f"LSTM detection failed: {e}")
+                    analysis_result.lstm_error = str(e)
+                    analysis_result.save()
+                    print(f"\n[LSTM ERROR] {e}\n")
+                    _update_progress(uploaded_file_id, 90)
+            else:
+                _update_progress(uploaded_file_id, 80)
+        else:
+            _update_progress(uploaded_file_id, 80)
+            
+    except Exception as e:
+        logger.error(f"Failed to copy file to VM or run analysis: {e}")
+        analysis_result.status = 'error'
+        analysis_result.save()
+        _update_progress(uploaded_file_id, 100, "error")
+        return
+    
+    analysis_result.status = 'done'
+    analysis_result.save()
+    _update_progress(uploaded_file_id, 100, "done")
+    print("\n[ANALYSIS COMPLETE] All scans finished!\n")

@@ -1,0 +1,14 @@
+django
+psycopg2-binary
+yara-python
+gitpython
+reportlab
+
+#Bazaar Helper
+requests
+python-dotenv
+colorama
+
+# lstm
+TensorFlow
+NumPy

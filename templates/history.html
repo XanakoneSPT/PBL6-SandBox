@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% block title %}MalSandbox - Analysis History{% endblock %}
+{% block content %}
+{% load static %}
+
+<link rel="stylesheet" href="{% static 'css/upload.css' %}">
+<link rel="stylesheet" href="{% static 'css/history.css' %}">
+
+<div class="malSandbox-logo">
+    <div class="malSandbox-icon">Σ</div>
+    <h1 class="malSandbox-title">MalSandbox</h1>
+</div>
+
+<section class="card">
+    <header>
+        <h3>Analysis History</h3>
+        <p>Your uploaded files and analysis results</p>
+    </header>
+    
+    {% if files %}
+        <div class="history-list">
+            <table class="history-table">
+                <thead>
+                    <tr>
+                        <th>File Name</th>
+                        <th>File Type</th>
+                        <th>Status</th>
+                        <th>Uploaded</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in files %}
+                    <tr>
+                        <td>{{ item.file.original_name }}</td>
+                        <td>{{ item.file.file_type|default:"Unknown" }}</td>
+                        <td>
+                            <span class="status-badge status-{{ item.status }}">
+                                {{ item.status|title }}
+                            </span>
+                        </td>
+                        <td>{{ item.file.created_at|date:"Y-m-d H:i" }}</td>
+                        <td>
+                            <a href="{% url 'result' file_id=item.file.id %}" class="btn btn-small">
+                                <i class="fas fa-eye"></i> View Details
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <p>No analysis history yet.</p>
+            <a href="{% url 'home' %}" class="btn btn-primary">
+                <i class="fas fa-upload"></i> Upload Your First File
+            </a>
+        </div>
+    {% endif %}
+</section>
+{% endblock %}

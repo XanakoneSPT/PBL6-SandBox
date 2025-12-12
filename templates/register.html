@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+{% block title %}MalSandbox - Register{% endblock %}
+{% block content %}
+{% load static %}
+
+<link rel="stylesheet" href="{% static 'css/upload.css' %}">
+<link rel="stylesheet" href="{% static 'css/register.css' %}">
+
+<div class="malSandbox-logo">
+    <div class="malSandbox-icon">Σ</div>
+    <h1 class="malSandbox-title">MalSandbox</h1>
+</div>
+
+<section class="card">
+    <header>
+        <h3>Register</h3>
+        <p>Create an account to track your analysis history</p>
+    </header>
+    
+    <form method="post" class="auth-form">
+        {% csrf_token %}
+        
+        {% if form.errors %}
+            <div class="form-errors">
+                {% for field, errors in form.errors.items %}
+                    {% for error in errors %}
+                        <div class="error-message">{{ error }}</div>
+                    {% endfor %}
+                {% endfor %}
+            </div>
+        {% endif %}
+        
+        <div class="form-group">
+            <label for="id_username">Username</label>
+            {{ form.username }}
+            {% if form.username.help_text %}
+                <small class="form-help">{{ form.username.help_text }}</small>
+            {% endif %}
+        </div>
+        
+        <div class="form-group">
+            <label for="id_password1">Password</label>
+            {{ form.password1 }}
+            {% if form.password1.help_text %}
+                <small class="form-help">{{ form.password1.help_text }}</small>
+            {% endif %}
+        </div>
+        
+        <div class="form-group">
+            <label for="id_password2">Password Confirmation</label>
+            {{ form.password2 }}
+            {% if form.password2.help_text %}
+                <small class="form-help">{{ form.password2.help_text }}</small>
+            {% endif %}
+        </div>
+        
+        <div class="form-group">
+            <button type="submit" class="btn btn-primary btn-block">
+                <i class="fas fa-user-plus"></i> Register
+            </button>
+        </div>
+        
+        <div class="form-footer">
+            <p>Already have an account? <a href="{% url 'login' %}">Login here</a></p>
+        </div>
+    </form>
+</section>
+
+{% endblock %}

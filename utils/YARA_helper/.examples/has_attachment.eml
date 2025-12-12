@@ -1,0 +1,12 @@
+From: sender@example.com
+To: recipient@example.com
+Subject: Test email with attachment
+Date: Tue, 14 Oct 2025 12:00:00 +0700
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="===============123456789=="
+X-Attachment-Id: 12345
+
+--===============123456789==
+Content-Type: text/plain; charset="utf-8"
+
+This is the message body.

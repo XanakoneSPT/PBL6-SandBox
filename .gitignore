@@ -1,0 +1,55 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+
+# Virtual Environment
+.venv/
+venv/
+env/
+ENV/
+
+# Environment Variables
+.env
+.env.local
+
+# Django
+*.log
+db.sqlite3
+db.sqlite3-journal
+/static/
+/media/
+*.pot
+local_settings.py
+
+# Shared Folders (VM Communication)
+shared_folders/to_vm/
+shared_folders/from_vm/
+
+# YARA
+utils/YARA/.examples/
+utils/YARA/custom_rules/.git/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Test Files
+test_yara_integration.py
+YARA_DOCUMENTATION.md
+Bao cao.docx
+baocao.txt
+test_programs/
