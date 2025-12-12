@@ -89,7 +89,7 @@ Server_v4/
 ### 1. Clone the Repository
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/XanakoneSPT/PBL6-SandBox.git
 cd Server_v4
 ```
 
@@ -300,7 +300,7 @@ File analysis runs in background threads to avoid blocking the web interface. Pr
 
 ## 📄 License
 
-[Specify your license here]
+
 
 ## 👥 Contributors
 
