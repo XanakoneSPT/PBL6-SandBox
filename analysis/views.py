@@ -7,7 +7,8 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.forms import UserCreationForm
 
-from .models import UploadedFile, AnalysisResult
+# Updated imports
+from .models import UploadedFile, ResultAnalysis, YaraAnalysis, BazaarAnalysis, LstmAnalysis
 
 from utils.hashes_cal import calculate_file_hashes
 from utils.getFileType import get_file_type
@@ -36,11 +37,12 @@ def upload(request: HttpRequest) -> HttpResponse:
 
             uf = UploadedFile.objects.create(
                 original_name=uploaded_file.name, 
-                file=uploaded_file,
+                file_path=uploaded_file, # Updated: file -> file_path
                 user=request.user if request.user.is_authenticated else None)
 
             try:
-                file_path = uf.file.path
+                # Updated: file.path -> file_path.path
+                file_path = uf.file_path.path
                 md5_hash, sha1_hash, sha256_hash = calculate_file_hashes(file_path)
                 file_type = get_file_type(file_path)
 
@@ -73,7 +75,7 @@ def history(request: HttpRequest) -> HttpResponse:
         for uf in ufs:
             try:
                 status = uf.analysis_result.status
-            except AnalysisResult.DoesNotExist:
+            except ResultAnalysis.DoesNotExist: # Updated Exception
                 status = 'pending'
             except Exception:
                 status = 'pending'
@@ -180,22 +182,36 @@ def api_progress(request: HttpRequest, file_id: int) -> JsonResponse:
             if analysis_result.status in ['done', 'error']:
                 progress_data['progress'] = 100
         
+        # Helper to safely get child model or dict
+        def get_child_data(model_attr, default_dict=None):
+            if default_dict is None: default_dict = {}
+            if hasattr(analysis_result, model_attr):
+                return getattr(analysis_result, model_attr)
+            return type('Dummy', (), default_dict)
+
+        yara = get_child_data('yara_analysis')
+        bazaar = get_child_data('bazaar_analysis')
+        lstm = get_child_data('lstm_analysis')
+
         progress_data.update({
-            'yara_filtered_matches': analysis_result.yara_filtered_matches,
-            'yara_raw_matches': analysis_result.yara_raw_matches,
-            'yara_error': analysis_result.yara_error,
-            'bazaar_success': analysis_result.bazaar_success,
-            'bazaar_is_malicious': analysis_result.bazaar_is_malicious,
-            'bazaar_malware_info': analysis_result.bazaar_malware_info,
-            'bazaar_error': analysis_result.bazaar_error,
-            'lstm_final_decision': analysis_result.lstm_final_decision,
-            'lstm_max_prob_anomaly': analysis_result.lstm_max_prob_anomaly,
-            'lstm_mean_prob_anomaly': analysis_result.lstm_mean_prob_anomaly,
-            'lstm_num_windows': analysis_result.lstm_num_windows,
-            'lstm_error': analysis_result.lstm_error,
+            'yara_filtered_matches': getattr(yara, 'matches', []), # Renamed field
+            'yara_raw_matches': getattr(yara, 'raw_matches', []), # Renamed field
+            'yara_error': getattr(yara, 'error', None), # Renamed field
+            
+            'bazaar_success': not getattr(bazaar, 'error', True), # Infer success
+            'bazaar_is_malicious': getattr(bazaar, 'is_malicious', False),
+            'bazaar_malware_info': getattr(bazaar, 'malware_info', {}),
+            'bazaar_error': getattr(bazaar, 'error', None),
+            
+            'lstm_final_decision': getattr(lstm, 'final_decision', None),
+            'lstm_max_prob_anomaly': getattr(lstm, 'max_prob_anomaly', None),
+            'lstm_mean_prob_anomaly': getattr(lstm, 'mean_prob_anomaly', None),
+            'lstm_num_windows': getattr(lstm, 'num_windows', None),
+            'lstm_error': getattr(lstm, 'error', None),
+            
             'interpreter': analysis_result.interpreter,
         })
-    except AnalysisResult.DoesNotExist:
+    except ResultAnalysis.DoesNotExist:
         # No analysis result yet, keep JSON progress data
         pass
     
@@ -290,22 +306,36 @@ def api_download_report(request: HttpRequest, file_id:int) -> HttpResponse:
     # Get results from database
     try:
         analysis_result = uf.analysis_result
+        
+        def get_child_data(model_attr, default_dict=None):
+            if default_dict is None: default_dict = {}
+            if hasattr(analysis_result, model_attr):
+                return getattr(analysis_result, model_attr)
+            return type('Dummy', (), default_dict)
+
+        yara = get_child_data('yara_analysis')
+        bazaar = get_child_data('bazaar_analysis')
+        lstm = get_child_data('lstm_analysis')
+
         progress_data.update({
-            'yara_filtered_matches': analysis_result.yara_filtered_matches,
-            'yara_raw_matches': analysis_result.yara_raw_matches,
-            'yara_error': analysis_result.yara_error,
-            'bazaar_success': analysis_result.bazaar_success,
-            'bazaar_is_malicious': analysis_result.bazaar_is_malicious,
-            'bazaar_malware_info': analysis_result.bazaar_malware_info,
-            'bazaar_error': analysis_result.bazaar_error,
-            'lstm_final_decision': analysis_result.lstm_final_decision,
-            'lstm_max_prob_anomaly': analysis_result.lstm_max_prob_anomaly,
-            'lstm_mean_prob_anomaly': analysis_result.lstm_mean_prob_anomaly,
-            'lstm_num_windows': analysis_result.lstm_num_windows,
-            'lstm_error': analysis_result.lstm_error,
+             'yara_filtered_matches': getattr(yara, 'matches', []), 
+            'yara_raw_matches': getattr(yara, 'raw_matches', []),
+            'yara_error': getattr(yara, 'error', None),
+            
+            'bazaar_success': not getattr(bazaar, 'error', True),
+            'bazaar_is_malicious': getattr(bazaar, 'is_malicious', False),
+            'bazaar_malware_info': getattr(bazaar, 'malware_info', {}),
+            'bazaar_error': getattr(bazaar, 'error', None),
+            
+            'lstm_final_decision': getattr(lstm, 'final_decision', None),
+            'lstm_max_prob_anomaly': getattr(lstm, 'max_prob_anomaly', None),
+            'lstm_mean_prob_anomaly': getattr(lstm, 'mean_prob_anomaly', None),
+            'lstm_num_windows': getattr(lstm, 'num_windows', None),
+            'lstm_error': getattr(lstm, 'error', None),
+            
             'interpreter': analysis_result.interpreter,
         })
-    except AnalysisResult.DoesNotExist:
+    except ResultAnalysis.DoesNotExist:
         pass
     
     file_info = {

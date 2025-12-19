@@ -8,7 +8,8 @@ from pathlib import Path
 from django.conf import settings
 from django.db import transaction
 
-from analysis.models import UploadedFile, AnalysisResult
+# Updated imports
+from analysis.models import UploadedFile, ResultAnalysis, YaraAnalysis, BazaarAnalysis, LstmAnalysis
 from utils.progress import _update_progress
 from utils.Bazaar_helper.checker_bazaar import check_hash
 from utils.lstm_detection.anormaly_predictor import AnomalyDetector
@@ -118,7 +119,8 @@ def _analyze_file(uploaded_file_id: int) -> None:
         logger.error(f"Failed to get file: {e}")
         return
 
-    analysis_result, created = AnalysisResult.objects.get_or_create(
+    # Use ResultAnalysis
+    analysis_result, created = ResultAnalysis.objects.get_or_create(
         uploaded_file=uf,
         defaults={'status': 'pending'}
     )
@@ -127,7 +129,7 @@ def _analyze_file(uploaded_file_id: int) -> None:
     
     # Get file path on Django server
     try:
-        host_file_path = uf.file.path
+        host_file_path = uf.file_path.path # Updated field name to file_path
     except Exception as e:
         logger.error(f"Failed to get file path: {e}")
         return
@@ -136,11 +138,16 @@ def _analyze_file(uploaded_file_id: int) -> None:
     # YARA scan
     try:
         yara_results = _run_yara_scan(host_file_path)
-        # Save ALL YARA fields to database
-        analysis_result.yara_filtered_matches = yara_results.get('filtered_matches', [])
-        analysis_result.yara_raw_matches = yara_results.get('raw_matches', [])
-        analysis_result.yara_error = yara_results.get('error')
-        analysis_result.save()  # Save all at once
+        
+        # Save to YaraAnalysis
+        YaraAnalysis.objects.update_or_create(
+            result_analysis=analysis_result,
+            defaults={
+                'matches': yara_results.get('filtered_matches', []),
+                'raw_matches': yara_results.get('raw_matches', []),
+                'error': yara_results.get('error')
+            }
+        )
         
         # Debug print
         print("\n" + "="*50)
@@ -148,16 +155,13 @@ def _analyze_file(uploaded_file_id: int) -> None:
         print("="*50)
         print(f"Filtered matches: {len(yara_results.get('filtered_matches', []))}")
         print(f"Raw matches: {len(yara_results.get('raw_matches', []))}")
-        if yara_results.get('raw_matches'):
-            print("Raw match rules:", [m.get('rule') for m in yara_results.get('raw_matches', [])])
-        if yara_results.get('error'):
-            print(f"Error: {yara_results.get('error')}")
         print("="*50 + "\n")
     except Exception as e:
         logger.error(f"YARA scan failed: {e}")
-        # Save error to database instead of JSON
-        analysis_result.yara_error = str(e)
-        analysis_result.save()
+        YaraAnalysis.objects.update_or_create(
+            result_analysis=analysis_result,
+            defaults={'error': str(e)}
+        )
         print(f"\n[YARA ERROR] {e}\n")
     _update_progress(uploaded_file_id, 20)
     
@@ -165,32 +169,34 @@ def _analyze_file(uploaded_file_id: int) -> None:
     try:
         if uf.sha256_hash:
             bazaar_results = _run_bazaar_scan(uf.sha256_hash)
-            analysis_result.bazaar_success = bazaar_results.get('success', False)
-            analysis_result.bazaar_is_malicious = bazaar_results.get('is_malicious', False)
-            # Handle None explicitly
-            malware_info = bazaar_results.get('malware_info')
-            analysis_result.bazaar_malware_info = malware_info if malware_info is not None else {}
-            analysis_result.bazaar_error = bazaar_results.get('error')
-            analysis_result.save()
+            
+            BazaarAnalysis.objects.update_or_create(
+                result_analysis=analysis_result,
+                defaults={
+                    'is_malicious': bazaar_results.get('is_malicious', False),
+                    'malware_info': bazaar_results.get('malware_info') if bazaar_results.get('malware_info') is not None else {},
+                    'error': bazaar_results.get('error')
+                }
+            )
+
             # Debug print
             print("\n" + "="*50)
             print("BAZAAR SCAN RESULTS:")
             print("="*50)
             print(f"Success: {bazaar_results.get('success', False)}")
-            print(f"Is Malicious: {bazaar_results.get('is_malicious', False)}")
-            if bazaar_results.get('malware_info'):
-                print(f"Malware Info: {bazaar_results.get('malware_info')}")
-            if bazaar_results.get('error'):
-                print(f"Error: {bazaar_results.get('error')}")
             print("="*50 + "\n")
         else:
-            analysis_result.bazaar_error = 'No hash'
-            analysis_result.save()
+            BazaarAnalysis.objects.update_or_create(
+                result_analysis=analysis_result,
+                defaults={'error': 'No hash'}
+            )
             print("\n[BAZAAR] No SHA256 hash available\n")
     except Exception as e:
         logger.error(f"Bazaar scan failed: {e}")
-        analysis_result.bazaar_error = str(e)
-        analysis_result.save()
+        BazaarAnalysis.objects.update_or_create(
+            result_analysis=analysis_result,
+            defaults={'error': str(e)}
+        )
         print(f"\n[BAZAAR ERROR] {e}\n")
     _update_progress(uploaded_file_id, 40)
     
@@ -210,9 +216,9 @@ def _analyze_file(uploaded_file_id: int) -> None:
         guest_full_path = VMrunner.copy_to_vm(host_file_path)
         guest_filename = Path(guest_full_path).name
         interpreter, ext, _ = VMrunner.detect_language(guest_full_path)
+        
         analysis_result.interpreter = interpreter if interpreter else None
         analysis_result.save()
-        # ext = Path(host_file_path).suffix.lower()
         
         # Run VM analysis
         try:
@@ -243,28 +249,32 @@ def _analyze_file(uploaded_file_id: int) -> None:
             if dest_path and dest_path.exists() and ext not in (".pdf", ".doc", ".docx", ".txt", ".rtf"):
                 try:
                     lstm_results = _run_lstm_scan(str(dest_path))
-                    analysis_result.lstm_final_decision = lstm_results.get('final_decision')
-                    analysis_result.lstm_max_prob_anomaly = lstm_results.get('max_prob_anomaly')
-                    analysis_result.lstm_mean_prob_anomaly = lstm_results.get('mean_prob_anomaly')
-                    analysis_result.lstm_num_windows = lstm_results.get('num_windows')
-                    analysis_result.lstm_error = lstm_results.get('error')
-                    analysis_result.save()
+                    
+                    LstmAnalysis.objects.update_or_create(
+                        result_analysis=analysis_result,
+                        defaults={
+                            'final_decision': lstm_results.get('final_decision'),
+                            'max_prob_anomaly': lstm_results.get('max_prob_anomaly'),
+                            'mean_prob_anomaly': lstm_results.get('mean_prob_anomaly'),
+                            'num_windows': lstm_results.get('num_windows'),
+                            'error': lstm_results.get('error'),
+                            'is_anomalous': lstm_results.get('final_decision') == 'Anomaly' # Infer boolean
+                        }
+                    )
+                    
                     # Debug print
                     print("\n" + "="*50)
                     print("LSTM DETECTION RESULTS:")
                     print("="*50)
                     print(f"Final Decision: {lstm_results.get('final_decision')}")
-                    print(f"Max Probability Anomaly: {lstm_results.get('max_prob_anomaly')}")
-                    print(f"Mean Probability Anomaly: {lstm_results.get('mean_prob_anomaly')}")
-                    print(f"Number of Windows: {lstm_results.get('num_windows')}")
-                    if lstm_results.get('error'):
-                        print(f"Error: {lstm_results.get('error')}")
                     print("="*50 + "\n")
                     _update_progress(uploaded_file_id, 90)
                 except Exception as e:
                     logger.error(f"LSTM detection failed: {e}")
-                    analysis_result.lstm_error = str(e)
-                    analysis_result.save()
+                    LstmAnalysis.objects.update_or_create(
+                        result_analysis=analysis_result,
+                        defaults={'error': str(e)}
+                    )
                     print(f"\n[LSTM ERROR] {e}\n")
                     _update_progress(uploaded_file_id, 90)
             else:
