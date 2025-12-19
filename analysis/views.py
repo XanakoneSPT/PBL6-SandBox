@@ -3,8 +3,10 @@ from django.shortcuts import render, redirect, reverse, get_object_or_404
 from django.http import FileResponse, HttpRequest, HttpResponse, JsonResponse, Http404, response
 from django.views.decorators.http import require_http_methods
 from django.conf import settings
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login, authenticate, logout
+from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm
 
 # Updated imports
@@ -92,6 +94,29 @@ def history(request: HttpRequest) -> HttpResponse:
         print(f"Error loading history: {e}")
         return render(request, 'history.html', {'files': []})
 
+@login_required
+def delete_history(request: HttpRequest, file_id: int) -> HttpResponse:
+    if request.method == 'POST':
+        uf = get_object_or_404(UploadedFile, id=file_id)
+        
+        # Security check: ensure user owns the file
+        if uf.user != request.user:
+             from django.http import HttpResponseForbidden
+             return HttpResponseForbidden("You don't have permission to delete this file.")
+        
+        try:
+            # Cleanup physical files
+            from utils.clean_folder import delete_analysis_data
+            delete_analysis_data(uf)
+            
+            # Delete from database
+            uf.delete()
+        except Exception as e:
+            print(f"Error deleting file {file_id}: {e}")
+            # Optionally add a flash message here
+            
+    return redirect('history')
+
 
 def result_page(request: HttpRequest, file_id: int) -> HttpResponse:
     uf = get_object_or_404(UploadedFile, id=file_id)
@@ -110,6 +135,46 @@ def result_page(request: HttpRequest, file_id: int) -> HttpResponse:
             return HttpResponseForbidden("You don't have permission to view this file.")
     
     return render(request, 'result.html', {'file': uf})
+
+
+
+@login_required
+def profile_view(request):
+    from django.contrib import messages
+    # Use update_session_auth_hash to keep user logged in after password change
+    from django.contrib.auth import update_session_auth_hash
+    
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        current_password = request.POST.get('current_password')
+        new_password = request.POST.get('new_password')
+        confirm_password = request.POST.get('confirm_password')
+        
+        # Verify current password
+        if not request.user.check_password(current_password):
+            messages.error(request, 'Incorrect current password.')
+            return redirect('profile')
+            
+        # Update username
+        if username and username != request.user.username:
+            if User.objects.filter(username=username).exists():
+                messages.error(request, 'Username already taken.')
+                return redirect('profile')
+            request.user.username = username
+            
+        # Update password
+        if new_password:
+            if new_password != confirm_password:
+                messages.error(request, 'New passwords do not match.')
+                return redirect('profile')
+            request.user.set_password(new_password)
+            update_session_auth_hash(request, request.user) # Important!
+            
+        request.user.save()
+        messages.success(request, 'Account updated successfully.')
+        return redirect('profile')
+        
+    return render(request, 'profile.html')
 
 def register_view(request: HttpRequest) -> HttpResponse:
     if request.user.is_authenticated:
@@ -141,7 +206,7 @@ def login_view(request: HttpRequest) -> HttpResponse:
                 login(request, user)
                 return redirect('home')
             else:
-                print('Invalid username or password.')
+                messages.error(request, 'Invalid username or password.')
     
     return render(request, 'login.html')
 

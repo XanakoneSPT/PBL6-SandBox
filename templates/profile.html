@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+{% block title %}MalSandbox - Profile Management{% endblock %}
+{% block content %}
+{% load static %}
+
+<link rel="stylesheet" href="{% static 'css/upload.css' %}">
+<link rel="stylesheet" href="{% static 'css/profile.css' %}">
+
+<div class="malSandbox-logo">
+    <div class="malSandbox-icon">Σ</div>
+    <h1 class="malSandbox-title">MalSandbox</h1>
+</div>
+
+<section class="card profile-card">
+    <header>
+        <h3>Account Settings</h3>
+        <p>Manage your account information</p>
+    </header>
+
+    {% if messages %}
+    {% for message in messages %}
+    <div class="{{ message.tags }}"
+        style="padding: 10px; border-radius: 4px; margin-bottom: 15px; text-align: center;
+                {% if 'success' in message.tags %}background: #d4edda; color: #155724; border: 1px solid #c3e6cb;{% endif %}
+                {% if 'error' in message.tags %}background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb;{% endif %}">
+        {{ message }}
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <form method="POST" class="auth-form profile-form">
+        {% csrf_token %}
+        <div class="profile-container">
+            <!-- Left Side: Basic Info -->
+            <div class="profile-left">
+                <h4 class="section-header">
+                    <i class="fas fa-user-circle section-header-icon"></i> Basic Information
+                </h4>
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" value="{{ user.username }}" required>
+                    <small class="help-text">This is your public display name.</small>
+                </div>
+            </div>
+
+            <!-- Vertical Divider -->
+            <div class="profile-divider"></div>
+
+            <!-- Right Side: Security -->
+            <div class="profile-right">
+                <h4 class="section-header">
+                    <i class="fas fa-lock section-header-icon"></i> Security
+                </h4>
+
+
+                <div class="form-group">
+                    <label for="current_password">Current Password <span class="required-star">*</span></label>
+                    <input type="password" id="current_password" name="current_password" required
+                        placeholder="Required to save changes">
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="new_password">New Password</label>
+                        <input type="password" id="new_password" name="new_password">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="confirm_password">Confirm New Password</label>
+                        <input type="password" id="confirm_password" name="confirm_password">
+                    </div>
+                </div>
+                <p class="section-desc">Change your password (leave blank to keep current).</p>
+            </div>
+        </div>
+
+        <div class="form-group save-btn-group">
+            <button type="submit" class="btn btn-primary btn-block">
+                <i class="fas fa-save"></i> Save Changes
+            </button>
+        </div>
+    </form>
+</section>
+{% endblock %}
