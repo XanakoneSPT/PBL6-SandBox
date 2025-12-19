@@ -3,13 +3,9 @@
 {% block content %}
 {% load static %}
 
-<link rel="stylesheet" href="{% static 'css/upload.css' %}">
+<link rel="stylesheet" href="{% static 'css/base.css' %}">
+<link rel="stylesheet" href="{% static 'css/app.css' %}">
 <link rel="stylesheet" href="{% static 'css/history.css' %}">
-
-<div class="malSandbox-logo">
-    <div class="malSandbox-icon">Σ</div>
-    <h1 class="malSandbox-title">MalSandbox</h1>
-</div>
 
 <section class="card">
     <header>
@@ -35,7 +31,7 @@
                     <td>{{ item.file.original_name }}</td>
                     <td>{{ item.file.file_type|default:"Unknown" }}</td>
                     <td>
-                        <span class="status-badge status-{{ item.status }}">
+                        <span class="status-badge status-{{ item.status|lower }}">
                             {{ item.status|title }}
                         </span>
                     </td>

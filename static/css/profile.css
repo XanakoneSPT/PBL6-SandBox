@@ -1,0 +1,94 @@
+/* Profile Page Styles */
+
+/* Card Override */
+.profile-card {
+    max-width: 900px;
+    margin: 4rem auto;
+    width: 100%;
+}
+
+/* 2-Column Layout */
+.profile-container {
+    display: flex;
+    gap: 40px;
+}
+
+.profile-left,
+.profile-right {
+    flex: 1;
+}
+
+/* Divider */
+.profile-divider {
+    display: none;
+    border-right: 1px solid var(--border-white-20);
+}
+
+@media (min-width: 768px) {
+    .profile-divider {
+        display: block;
+    }
+}
+
+@media (max-width: 768px) {
+    .profile-container {
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .profile-divider {
+        display: none;
+        border-bottom: 1px solid var(--border-white-20);
+        border-right: none;
+        margin: 10px 0;
+    }
+}
+
+/* Section Headers */
+.section-header {
+    margin-bottom: 20px;
+    color: var(--brand-blue-start);
+    font-size: 1.1rem;
+    border-bottom: 1px solid var(--border-white-20);
+    padding-bottom: 10px;
+    font-weight: 600;
+}
+
+.section-header-icon {
+    margin-right: 8px;
+    color: var(--brand-blue-start);
+}
+
+.section-desc {
+    font-size: 0.9rem;
+    color: var(--text-white-60);
+    margin-bottom: 15px;
+    margin-top: -10px;
+}
+
+/* Form Row for split inputs */
+.form-row {
+    display: flex;
+    gap: 1rem;
+}
+
+.form-row .form-group {
+    flex: 1;
+}
+
+/* Helper Text */
+.help-text,
+.required-star {
+    color: var(--text-white-60);
+    font-size: 0.8rem;
+}
+
+.required-star {
+    color: var(--malicious-red);
+}
+
+.save-btn-group {
+    margin-top: 30px;
+    display: flex;
+    justify-content: center;
+}

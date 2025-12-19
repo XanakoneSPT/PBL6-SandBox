@@ -2,19 +2,16 @@
 {% block title %}MalSandbox - Analysis Result{% endblock %}
 {% block content %}
 {% load static %}
+<link rel="stylesheet" href="{% static 'css/base.css' %}">
+<link rel="stylesheet" href="{% static 'css/app.css' %}">
 <link rel="stylesheet" href="{% static 'css/result.css' %}">
-
-<div class="malSandbox-logo">
-    <div class="malSandbox-icon">Σ</div>
-    <h1 class="malSandbox-title">MalSandbox</h1>
-</div>
 
 <section class="card">
     <header>
         <h3>Analysis Result</h3>
         <p>File: {{ file.original_name }}</p>
     </header>
-    
+
     <article id="result-container" data-file-id="{{ file.id }}">
         <div class="progress-section">
             <div class="progress-header">
@@ -35,20 +32,20 @@
                 <button class="tab-btn" data-tab="details">Details</button>
                 <button class="tab-btn" data-tab="logs">VM Logs</button>
             </div>
-            
+
             <div class="tab-content">
                 <div id="summary-tab" class="tab-pane active">
                     <div class="summary-grid" id="summary-grid">
                         <!-- Summary cards will be populated by JavaScript -->
                     </div>
                 </div>
-                
+
                 <div id="details-tab" class="tab-pane">
                     <div class="details-content" id="details-content">
                         <!-- Detailed analysis will be populated by JavaScript -->
                     </div>
                 </div>
-                
+
                 <div id="logs-tab" class="tab-pane">
                     <div class="logs-container">
                         <div class="logs-header">
