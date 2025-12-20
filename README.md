@@ -72,11 +72,11 @@ git checkout webserver
 |--------|---------|--------|---------------|
 | [`main`](../../tree/main) | Repository entry point | ✅ Active | This README |
 | [`webserver`](../../tree/webserver) | Django web application | 🚧 Development | [Webserver README](../../tree/webserver#readme) |
-| [`feature/static-check`](../../tree/feature/static-check) | Static analysis & code quality checks | 🚧 Development | Inherits Webserver docs |
-| [`feature/malwarebazaar-api`](../../tree/feature/malwarebazaar-api) | MalwareBazaar API integration | 🚧 Development | Inherits Webserver docs |
-| [`feature/lstm-detection`](../../tree/feature/lstm-detection) | LSTM-based malware detection module | 🚧 Development | Inherits Webserver docs |
-| [`feature/vm-file-handler`](../../tree/feature/vm-file-handler) | VM file upload & handling logic | 🚧 Development | Inherits Webserver docs |
-| [`feature/report-gen`](../../tree/feature/report-gen) | Malware analysis report generation | 🚧 Development | Inherits Webserver docs |
+| [`feature/vm-file-handler`](../../tree/feature/vm-file-handler) | VM file upload & handling logic | 🚧 Development | * |
+| [`feature/static-check`](../../tree/feature/static-check) | Static analysis & code quality checks | 🚧 Development | * |
+| [`feature/malwarebazaar-api`](../../tree/feature/malwarebazaar-api) | MalwareBazaar API integration | 🚧 Development | * |
+| [`feature/lstm-detection`](../../tree/feature/lstm-detection) | LSTM-based malware detection module | 🚧 Development | * |
+| [`feature/report-gen`](../../tree/feature/report-gen) | Malware analysis report generation | 🚧 Development | * |
 
 ---
 
