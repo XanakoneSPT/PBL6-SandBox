@@ -74,6 +74,10 @@
     color: var(--text-white-90);
     font-size: 0.95rem;
     vertical-align: middle;
+    max-width: 200px;
+    white-space: normal;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
 }
 
 /* Status Badges */
