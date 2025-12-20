@@ -136,6 +136,7 @@ def _analyze_file(uploaded_file_id: int) -> None:
     _update_progress(uploaded_file_id, 10)
     
     # YARA scan
+    _update_progress(uploaded_file_id, 15)
     try:
         yara_results = _run_yara_scan(host_file_path)
         
@@ -166,6 +167,7 @@ def _analyze_file(uploaded_file_id: int) -> None:
     _update_progress(uploaded_file_id, 20)
     
     # Bazaar scan
+    _update_progress(uploaded_file_id, 30)
     try:
         if uf.sha256_hash:
             bazaar_results = _run_bazaar_scan(uf.sha256_hash)
@@ -204,6 +206,7 @@ def _analyze_file(uploaded_file_id: int) -> None:
     try:
         from utils.VM.SandboxRunner import SandboxRunner
         VMrunner = SandboxRunner()
+        _update_progress(uploaded_file_id, 45)
     except Exception as e:
         logger.error(f"Failed to create SandboxRunner: {e}")
         analysis_result.status = 'error'
@@ -214,13 +217,16 @@ def _analyze_file(uploaded_file_id: int) -> None:
     # Copy file to VM and run analysis
     try:
         guest_full_path = VMrunner.copy_to_vm(host_file_path)
+        _update_progress(uploaded_file_id, 50)
         guest_filename = Path(guest_full_path).name
         interpreter, ext, _ = VMrunner.detect_language(guest_full_path)
+        _update_progress(uploaded_file_id, 55)
         
         analysis_result.interpreter = interpreter if interpreter else None
         analysis_result.save()
         
         # Run VM analysis
+        _update_progress(uploaded_file_id, 60)
         try:
             if ext in (".pdf", ".doc", ".docx", ".txt", ".rtf"):
                 log_path_in_vm = VMrunner.analyze_document(guest_filename, log_file="document_analysis.txt")
@@ -231,6 +237,7 @@ def _analyze_file(uploaded_file_id: int) -> None:
             log_path_in_vm = None
         
         # Copy log file back from VM
+        _update_progress(uploaded_file_id, 75)
         if log_path_in_vm:
             dest_dir = settings.SHARED_FOLDERS["FROM_VM"]
             dest_dir.mkdir(parents=True, exist_ok=True)
@@ -247,6 +254,7 @@ def _analyze_file(uploaded_file_id: int) -> None:
             
             # Run LSTM detection (only for strace logs)
             if dest_path and dest_path.exists() and ext not in (".pdf", ".doc", ".docx", ".txt", ".rtf"):
+                _update_progress(uploaded_file_id, 85)
                 try:
                     lstm_results = _run_lstm_scan(str(dest_path))
                     
@@ -289,6 +297,7 @@ def _analyze_file(uploaded_file_id: int) -> None:
         _update_progress(uploaded_file_id, 100, "error")
         return
     
+    _update_progress(uploaded_file_id, 95)
     analysis_result.status = 'done'
     analysis_result.save()
     _update_progress(uploaded_file_id, 100, "done")

@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', function(){
+document.addEventListener('DOMContentLoaded', function () {
 
     const fileId = document.getElementById('result-container').getAttribute('data-file-id');
 
@@ -7,9 +7,10 @@ document.addEventListener('DOMContentLoaded', function(){
     async function monitorAnalysis() {
         const progressBar = document.getElementById('bar');
         const progressText = document.getElementById('progress-text');
-        const statusText = document.getElementById('status');
+        const statusText = document.getElementById('status-message');
+        const scanningAnimation = document.querySelector('.scanning-animation');
 
-        try{
+        try {
             const response = await fetch(`/api/progress/${fileId}/`);
             const data = await response.json();
 
@@ -17,8 +18,12 @@ document.addEventListener('DOMContentLoaded', function(){
             progressText.textContent = data.progress + '%';
             statusText.textContent = data.status;
 
-            if (data.status === 'done'){
+            if (data.progress >= 100) {
                 clearInterval(intervalId);
+
+                if (scanningAnimation) {
+                    scanningAnimation.style.display = 'none';
+                }
 
                 document.getElementById('results-section').style.display = 'block';
                 setupTabs();
@@ -32,7 +37,7 @@ document.addEventListener('DOMContentLoaded', function(){
                 if (uploadBtn) uploadBtn.style.display = 'inline-flex';
                 if (downloadBtn) downloadBtn.style.display = 'inline-flex';
             }
-        } catch(error){
+        } catch (error) {
             console.error('Error: ', error);
         }
     }
@@ -40,12 +45,12 @@ document.addEventListener('DOMContentLoaded', function(){
     monitorAnalysis();
 
     // Tabs
-    function setupTabs(){
+    function setupTabs() {
         const tabButtons = document.querySelectorAll('.tab-btn');
         const tabPanes = document.querySelectorAll('.tab-pane');
 
         tabButtons.forEach(btn => {
-            btn.addEventListener('click', ()=>{
+            btn.addEventListener('click', () => {
                 const tabName = btn.getAttribute('data-tab');
 
                 // remove active class from all buttons
@@ -67,7 +72,7 @@ document.addEventListener('DOMContentLoaded', function(){
     setupTabs();
 
     // Summary
-    function populateSummaries(data){
+    function populateSummaries(data) {
         const summaryGrid = document.getElementById('summary-grid');
         summaryGrid.innerHTML = '';
 
@@ -89,7 +94,7 @@ document.addEventListener('DOMContentLoaded', function(){
         const yaraMatches = data.yara_raw_matches?.length || 0;
         const yaraStatus = data.yara_error ? 'Error' : (yaraMatches > 0 ? 'Threats Detected' : 'Clean');
         const yaraClass = data.yara_error ? 'error' : (yaraMatches > 0 ? 'malicious' : 'safe');
-        
+
         html += `
             <div class="summary-card">
                 <h5><i class="fas fa-shield-alt"></i> Pattern Detection</h5>
@@ -103,16 +108,16 @@ document.addEventListener('DOMContentLoaded', function(){
         let bazaarClass = 'safe';
         let bazaarDetails = 'Database check not performed';
 
-        if (data.bazaar_error){
+        if (data.bazaar_error) {
             bazaarStatus = 'Error';
             bazaarClass = 'error';
             bazaarDetails = sanitizeError(data.bazaar_error);
-        } else if (data.bazaar_success){
-            if (data.bazaar_is_malicious){
+        } else if (data.bazaar_success) {
+            if (data.bazaar_is_malicious) {
                 bazaarStatus = 'Malicious';
                 bazaarClass = 'malicious';
                 bazaarDetails = 'Match malware in the database';
-            } else{
+            } else {
                 bazaarStatus = 'Clean';
                 bazaarClass = 'safe';
                 bazaarDetails = 'Not match in malware database';
@@ -196,7 +201,7 @@ document.addEventListener('DOMContentLoaded', function(){
         `;
 
         // LSTM section
-        if (data.lstm_error){
+        if (data.lstm_error) {
             html += `
                 <div class="detail-section">
                     <h6>Behavioral Analysis</h6>
@@ -206,7 +211,7 @@ document.addEventListener('DOMContentLoaded', function(){
                     </ul>
                 </div>
             `;
-        } else if (!data.lstm_final_decision){
+        } else if (!data.lstm_final_decision) {
             html += `
             <div class="detail-section">
                 <h6>Behavioral Analysis</h6>
@@ -230,7 +235,7 @@ document.addEventListener('DOMContentLoaded', function(){
         }
 
         // Bazaar section
-        if (data.bazaar_error){
+        if (data.bazaar_error) {
             html += `
                 <div class="detail-section">
                     <h6>Malware Database</h6>
@@ -240,7 +245,7 @@ document.addEventListener('DOMContentLoaded', function(){
                     </ul>
                 </div>
             `;
-        }else if (!data.bazaar_success){
+        } else if (!data.bazaar_success) {
             html += `
                 <div class="detail-section">
                     <h6>Malware Database</h6>
@@ -249,7 +254,7 @@ document.addEventListener('DOMContentLoaded', function(){
                     </ul>
                 </div>
             `;
-        } else if (data.bazaar_is_malicious && data.bazaar_malware_info){
+        } else if (data.bazaar_is_malicious && data.bazaar_malware_info) {
             html += `
                 <div class="detail-section">
                     <h6>Malware Database</h6>
@@ -262,7 +267,7 @@ document.addEventListener('DOMContentLoaded', function(){
                     </ul>
                 </div>
             `;
-        } else{
+        } else {
             html += `
                 <div class="detail-section">
                     <h6>Malware Database</h6>
@@ -274,7 +279,7 @@ document.addEventListener('DOMContentLoaded', function(){
         }
 
         // Yara section
-        if (data.yara_error){
+        if (data.yara_error) {
             html += `
                 <div class="detail-section">
                     <h6>Patterns Detection</h6>
@@ -284,7 +289,7 @@ document.addEventListener('DOMContentLoaded', function(){
                     </ul>
                 </div>
             `;
-        } else if (!data.yara_raw_matches || data.yara_raw_matches.length === 0){
+        } else if (!data.yara_raw_matches || data.yara_raw_matches.length === 0) {
             html += `
                 <div class="detail-section">
                     <h6>Patterns Detection</h6>
@@ -293,7 +298,7 @@ document.addEventListener('DOMContentLoaded', function(){
                     </ul>
                 </div>
             `;
-        }else{
+        } else {
             // rules list
             let rulesHtml = '';
             data.yara_raw_matches.forEach((match, index) => {
@@ -307,7 +312,7 @@ document.addEventListener('DOMContentLoaded', function(){
                     </li>
                 `;
             });
-            
+
             html += `
                 <div class="detail-section">
                     <h6>Patterns Detection</h6>
@@ -329,38 +334,38 @@ document.addEventListener('DOMContentLoaded', function(){
     }
 
     // VM logs tab
-    async function populateVMLogs(){
+    async function populateVMLogs() {
         const logContent = document.getElementById('logs-content');
-    
+
         logContent.innerHTML = '<div class="log-entry">Loading logs...</div>';
-    
+
         try {
             const response = await fetch(`/api/vm-logs/${fileId}/`);
-            
-            if(!response.ok){
+
+            if (!response.ok) {
                 const errorData = await response.json().catch(() => ({ error: 'Failed to fetch logs' }));
                 throw new Error(errorData.error || 'Failed to fetch logs');
             }
-    
+
             const data = await response.json();
-    
-            if(!data.logs || data.logs.length === 0){
+
+            if (!data.logs || data.logs.length === 0) {
                 logContent.innerHTML = `<div class="log-entry">No logs</div>`;
                 return;
             }
-    
+
             // Get the first (and only) log file
             const logFile = data.logs[0];
-    
+
             // Fetch the content of this log file
             const contentResponse = await fetch(`/api/vm-logs/${fileId}/${logFile.filename}/`);
-            
-            if(!contentResponse.ok){
+
+            if (!contentResponse.ok) {
                 throw new Error('Failed to fetch log content');
             }
-    
+
             const contentData = await contentResponse.json();
-    
+
             // Split content by newlines
             const lines = contentData.content.split('\n');
 
@@ -387,8 +392,8 @@ document.addEventListener('DOMContentLoaded', function(){
             });
 
             logContent.innerHTML = html;
-    
-        } catch(error){
+
+        } catch (error) {
             logContent.innerHTML = `<div class="log-entry">Error: ${sanitizeError(error.message)}</div>`;
         }
     }
@@ -400,50 +405,50 @@ document.addEventListener('DOMContentLoaded', function(){
     // Helper function to sanitize error messages
     function sanitizeError(errorMessage) {
         if (!errorMessage) return 'Unknown error occurred';
-        
+
         const error = String(errorMessage).toLowerCase();
-        
+
         // File type/format errors
-        if (error.includes('not supported') || error.includes('không phải định dạng') || 
+        if (error.includes('not supported') || error.includes('không phải định dạng') ||
             error.includes('file type') || error.includes('format')) {
             return 'File type not supported';
         }
-        
+
         // File path/access errors
-        if (error.includes('could not open') || error.includes('cannot open') || 
+        if (error.includes('could not open') || error.includes('cannot open') ||
             error.includes('path') || error.includes('file not found') ||
             error.includes('permission denied') || error.includes('access denied')) {
             return 'Unable to access file. File may be corrupted or in an unsupported format.';
         }
-        
+
         // Hash-related errors
         if (error.includes('no hash') || error.includes('hash')) {
             return 'Unable to calculate file hash';
         }
-        
+
         // API/network errors
-        if (error.includes('api') || error.includes('network') || 
+        if (error.includes('api') || error.includes('network') ||
             error.includes('connection') || error.includes('timeout')) {
             return 'External service unavailable. Please try again later.';
         }
-        
+
         // VM/sandbox errors
-        if (error.includes('vm') || error.includes('sandbox') || 
+        if (error.includes('vm') || error.includes('sandbox') ||
             error.includes('virtual machine')) {
             return 'Analysis environment error. Please try again.';
         }
-        
+
         // LSTM/model errors
-        if (error.includes('lstm') || error.includes('model') || 
+        if (error.includes('lstm') || error.includes('model') ||
             error.includes('neural') || error.includes('prediction')) {
             return 'Behavioral analysis failed. Insufficient data for analysis.';
         }
-        
+
         // Database errors
         if (error.includes('database') || error.includes('db')) {
             return 'Database query failed';
         }
-        
+
         // Generic fallback - don't show the actual error
         return 'An error occurred during analysis. Please try again or contact support if the issue persists.';
     }
@@ -460,21 +465,21 @@ document.addEventListener('DOMContentLoaded', function(){
     // Refresh logs button handler
     const refreshLogsBtn = document.getElementById('refresh-logs');
     if (refreshLogsBtn) {
-        refreshLogsBtn.addEventListener('click', function() {
+        refreshLogsBtn.addEventListener('click', function () {
             populateVMLogs();
         });
     }
-    
+
     // Download logs button handler
     const downloadLogsBtn = document.getElementById('download-logs');
     if (downloadLogsBtn) {
-        downloadLogsBtn.addEventListener('click', function() {
+        downloadLogsBtn.addEventListener('click', function () {
             console.log('Download logs clicked');
 
-            try{
+            try {
                 const fileNameSpan = document.querySelector('.log-file-name');
 
-                if(!fileNameSpan || !fileNameSpan.textContent){
+                if (!fileNameSpan || !fileNameSpan.textContent) {
                     alert('No log file abailable.')
                     return
                 }
@@ -494,8 +499,8 @@ document.addEventListener('DOMContentLoaded', function(){
                 setTimeout(() => {
                     document.body.removeChild(link);
                 }, 100);
-        
-            } catch (error){
+
+            } catch (error) {
                 alert('Failed to download log file.')
             }
         });
@@ -503,7 +508,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
     const downloadReportBtn = document.getElementById('download-report');
     if (downloadReportBtn) {
-        downloadReportBtn.addEventListener('click', function() {
+        downloadReportBtn.addEventListener('click', function () {
             const downloadUrl = `/api/download-report/${fileId}/`;
             window.location.href = downloadUrl;
         });
