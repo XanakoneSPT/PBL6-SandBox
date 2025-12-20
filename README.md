@@ -75,15 +75,17 @@ cd Server_v4
 
 ---
 
-## 📂 Branch & Feature Structure
+## 📂 Branch & Feature
 
 | Feature | Branch/Location | Status | Description |
 |---------|-----------------|--------|-------------|
+| **Main** | [`main`](../../tree/main) | ✅ Active | Repository entry point |
 | **Web Interface** | [`webserver`](../../tree/webserver) | ✅ Active | Glassmorphism UI, Auth, Dashboard |
-| **Analysis Core** | `Server_v4/analysis` | ✅ Active | Models, Views, Celery Tasks |
-| **VM Orchestrator** | `Server_v4/utils/VM` | 🚧 Beta | `SandboxRunner` for VM control |
-| **LSTM Detection** | `Server_v4/utils/lstm` | 🚧 Beta | ML model for behavioral analysis |
-| **Report Gen** | `Server_v4/utils` | 🚧 Beta | PDF generation & log parsing |
+| **VM Orchestrator** | [`feature/vm-file-handler`](../../tree/feature/vm-file-handler) | ✅ Active | VM file upload & handling logic |
+| **Pattern Detection** | [`feature/static-check`](../../tree/feature/static-check) | ✅ Active | Static analysis & code quality checks by YARA rules |
+| **Malware Database** | [`feature/malwarebazaar-api`](../../tree/feature/malwarebazaar-api) | ✅ Active | MalwareBazaar API integration |
+| **Behavioral Analysis** | [`feature/lstm-detection`](../../tree/feature/lstm-detection) | ✅ Active | ML model for behavioral analysis |
+| **Report Gen** | [`feature/report-gen`](../../tree/feature/report-gen) | ✅ Active | PDF generation & log parsing |
 
 ---
 
