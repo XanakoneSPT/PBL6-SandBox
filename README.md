@@ -96,7 +96,7 @@ cd Server_v4
 4.  **PR**: Submit Pull Requests targeting **`webserver`**.
 
 ### For Users:
-- **Deployment**: See [`Server_v4/README.md`](../../tree/webserver/Server_v4/README.md) for production deployment steps.
+- **Deployment**: See [`Server_v4/README.md`](../../tree/webserver/README.md) for production deployment steps.
 
 ---
 
@@ -108,23 +108,12 @@ cd Server_v4
 
 ---
 
-## 📊 Project Status
-
-| Component | Status | Progress | Notes |
-|-----------|--------|----------|-------|
-| **Django Backend** | ✅ Stable | 95% | Core logic complete |
-| **Web Interface** | ✅ Stable | 90% | UI/UX polished |
-| **VM Integration** | 🚧 Testing | 80% | Runner implemented, refining agent |
-| **Analysis Engine** | 🚧 Integrated | 85% | YARA/Bazaar/LSTM integrated |
-| **Documentation** | 📝 Active | 70% | Guides being updated |
-
----
-
 ## 🎓 Academic Project
-**Course:** PBL6 - Advanced System Security
-**Focus:** Automated Malware Analysis & Sandboxing techniques.
+- **Course:** PBL6 - Information Security Specialization Project
+- **Focus:** Automated Malware Analysis & Sandboxing techniques.
 
 ---
 
-## 📝 License
-This project is licensed under the **MIT License**.
+## 👥 Authors
+- **Xanakone Siphanthong**
+- **Nguyen Viet Minh Duc**
