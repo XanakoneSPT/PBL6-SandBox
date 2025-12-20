@@ -1,7 +1,7 @@
+from django.conf import settings
+from pathlib import Path
 import shutil
 import os
-from pathlib import Path
-from django.conf import settings
 import logging
 
 def cleanup_uploaded_file() -> None:

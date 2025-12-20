@@ -1,15 +1,15 @@
-from hashlib import sha256
-from ntpath import isdir, isfile
 import os
 import shutil
 import logging
+from hashlib import sha256
+from ntpath import isdir, isfile
 from pathlib import Path
 
 from django.conf import settings
 from django.db import transaction
 
-# Updated imports
 from analysis.models import UploadedFile, ResultAnalysis, YaraAnalysis, BazaarAnalysis, LstmAnalysis
+
 from utils.progress import _update_progress
 from utils.Bazaar_helper.checker_bazaar import check_hash
 from utils.lstm_detection.anormaly_predictor import AnomalyDetector

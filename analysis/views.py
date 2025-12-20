@@ -1,4 +1,3 @@
-from unittest import result
 from django.shortcuts import render, redirect, reverse, get_object_or_404
 from django.http import FileResponse, HttpRequest, HttpResponse, JsonResponse, Http404, response
 from django.views.decorators.http import require_http_methods
@@ -9,7 +8,11 @@ from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm
 
-# Updated imports
+from unittest import result
+from datetime import datetime
+
+import threading
+
 from .models import UploadedFile, ResultAnalysis, YaraAnalysis, BazaarAnalysis, LstmAnalysis
 
 from utils.hashes_cal import calculate_file_hashes
@@ -19,8 +22,6 @@ from utils.progress import get_progress
 from utils.report_gen import generate_pdf
 from utils.clean_folder import cleanup_uploaded_file
 
-import threading
-from datetime import datetime
 
 # Create your views here.
 @require_http_methods(['GET', 'POST'])
@@ -135,8 +136,6 @@ def result_page(request: HttpRequest, file_id: int) -> HttpResponse:
             return HttpResponseForbidden("You don't have permission to view this file.")
     
     return render(request, 'result.html', {'file': uf})
-
-
 
 @login_required
 def profile_view(request):
