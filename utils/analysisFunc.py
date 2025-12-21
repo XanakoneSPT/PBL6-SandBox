@@ -108,10 +108,12 @@ def _run_lstm_scan(log_path: str) -> dict:
 
 def _analyze_file(uploaded_file_id: int) -> None:
     logger = logging.getLogger(__name__)
+    print(f"[ANALYSIS] Starting analysis for file {uploaded_file_id}")
     
     # Get uploaded file from database
     try:
         uf = UploadedFile.objects.get(id=uploaded_file_id)
+        print(f"[ANALYSIS] Got uploaded file: {uf.original_name}")
     except UploadedFile.DoesNotExist:
         logger.error(f"UploadedFile not found: id={uploaded_file_id}")
         return
@@ -124,8 +126,10 @@ def _analyze_file(uploaded_file_id: int) -> None:
         uploaded_file=uf,
         defaults={'status': 'pending'}
     )
+    print(f"[ANALYSIS] Created analysis result: {created}, status: {analysis_result.status}")
     
     _update_progress(uploaded_file_id, 5, "processing")
+    print(f"[ANALYSIS] Updated progress to 5% processing")
     
     # Get file path on Django server
     try:

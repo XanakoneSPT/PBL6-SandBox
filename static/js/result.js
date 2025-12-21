@@ -7,18 +7,35 @@ document.addEventListener('DOMContentLoaded', function () {
     async function monitorAnalysis() {
         const progressBar = document.getElementById('bar');
         const progressText = document.getElementById('progress-text');
-        const statusText = document.getElementById('status-message');
+        const statusText = document.getElementById('status');
         const scanningAnimation = document.querySelector('.scanning-animation');
+        console.log('Elements found:', {progressBar, progressText, statusText, scanningAnimation});
 
         try {
             const response = await fetch(`/api/progress/${fileId}/`);
             const data = await response.json();
+            console.log('API data:', data);
 
-            progressBar.value = data.progress;
-            progressText.textContent = data.progress + '%';
-            statusText.textContent = data.status;
+            if (progressBar) progressBar.value = data.progress;
+            if (progressText) progressText.textContent = data.progress + '%';
+            
+            // Map status to user-friendly messages
+            const statusMessages = {
+                'pending': 'Initializing analysis...',
+                'processing': 'Processing...',
+                'done': 'Analysis complete',
+                'error': 'Analysis failed'
+            };
+            
+            if (statusText) {
+                statusText.textContent = statusMessages[data.status] || data.status;
+                console.log('Status set to:', statusText.textContent);
+            } else {
+                console.log('statusText is null');
+            }
 
             if (data.progress >= 100) {
+                console.log('Progress 100, showing results');
                 clearInterval(intervalId);
 
                 if (scanningAnimation) {
